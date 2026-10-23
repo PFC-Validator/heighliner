@@ -100,6 +100,9 @@ func queueAndBuild(
 		if chainConfig.cloneKeyOverride != "" {
 			chainNodeConfig.CloneKey = chainConfig.cloneKeyOverride
 		}
+		if chainConfig.dockerfileOverride != "" {
+			chainNodeConfig.Dockerfile = builder.DockerfileType(chainConfig.dockerfileOverride)
+		}
 		if chainConfig.buildTargetOverride != "" {
 			chainNodeConfig.BuildTarget = chainConfig.buildTargetOverride
 		}

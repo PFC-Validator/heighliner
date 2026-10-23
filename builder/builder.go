@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -174,6 +175,27 @@ func getModFile(
 			return nil, fmt.Errorf("failed to read %s for local build: %w", goModPath, err)
 		}
 	} else {
+		// go.mod over the raw HTTP endpoint: a go-git clone to read one file
+		// crawls at tens of KB/s over a single connection, which turns every
+		// build into an hour. Fetch just the file; fall back to the clone only
+		// if that fails (non-github repo hosts, unusual refs).
+		if repoHost == "" || repoHost == "github.com" {
+			rawURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s", organization, repoName, ref, goModPath)
+			resp, rawErr := http.Get(rawURL)
+			if rawErr == nil {
+				defer resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					if goModBz, rawErr = io.ReadAll(resp.Body); rawErr == nil {
+						goMod, err := modfile.Parse("go.mod", goModBz, nil)
+						if err != nil {
+							return nil, fmt.Errorf("failed to parse go.mod file: %w", err)
+						}
+						return goMod, nil
+					}
+				}
+			}
+		}
+
 		// single branch depth 1 clone to only fetch most recent state of files
 		cloneOpts := &git.CloneOptions{
 			URL:          fmt.Sprintf("https://%s/%s/%s", repoHost, organization, repoName),
