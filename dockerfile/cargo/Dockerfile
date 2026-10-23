@@ -1,5 +1,7 @@
 FROM --platform=$BUILDPLATFORM rust:1-bullseye AS build-env
 
+RUN sed -i 's|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g' /etc/apt/sources.list && rm -f /etc/apt/sources.list.d/* && apt-get -o Acquire::Check-Valid-Until=false update
+
 RUN rustup component add rustfmt
 
 ARG TARGETARCH
@@ -154,6 +156,7 @@ FROM alpine:3 as alpine-3
 
 # Use TARGETARCH image for determining necessary libs
 FROM rust:1-bullseye as target-arch-libs
+RUN sed -i 's|deb.debian.org|archive.debian.org|g; s|security.debian.org|archive.debian.org|g' /etc/apt/sources.list && rm -f /etc/apt/sources.list.d/* && apt-get -o Acquire::Check-Valid-Until=false update
 RUN apt update && apt install -y libssl1.1 openssl clang libstdc++6
 
 ARG TARGETARCH
